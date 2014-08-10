@@ -33,7 +33,7 @@ class Emitter < Parslet::Atoms::Context
     @queue ||= []
   end
 
-  def try_with_cache(obj, source)
+  def try_with_cache(obj, source, context)
     success, value = result = super
 
     case value

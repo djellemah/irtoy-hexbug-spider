@@ -50,6 +50,8 @@ class IrToy < Serial
     end
   end
 
+  # TODO take args, and concatenate args into a string that
+  # can be passed to super.
   def write( stuff )
     case stuff
     when String
