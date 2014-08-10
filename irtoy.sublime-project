@@ -1,0 +1,17 @@
+{
+	"folders":
+	[
+		{
+			"follow_symlinks": true,
+			"path": "."
+		},
+		{
+			"follow_symlinks": true,
+			"path": "/home/panic/src/rubyserial"
+		},
+		{
+			"follow_symlinks": true,
+			"path": "/usr/local/rvm/gems/ruby-2.1.2@scratch/gems/parslet-1.4.0"
+		}
+	]
+}
