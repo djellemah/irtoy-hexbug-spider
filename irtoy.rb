@@ -158,7 +158,7 @@ class IrToy < Serial
   end
 
   # create wrapper and keep the IO instance around so it doesn't make the fd available
-  # for something else to use. While breaks unpleasantly, naturally enough.
+  # for something else to use. Which breaks unpleasantly, naturally enough.
   # Should really be part of rubyserial.
   def io
     @io ||= IO.for_fd(@fd)
@@ -187,7 +187,7 @@ class IrToy < Serial
   def settings
     write 0x23
     rv = wait_read.read.unpack 'C4N'
-    # put it back in sample mode.
+    # put it back in sample mode. Request for settings seems to end sample mode.
     sample_mode
     rv
   end

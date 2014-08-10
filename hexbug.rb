@@ -5,6 +5,8 @@ class Hexbug
     @irtoy = irtoy
   end
 
+  attr_reader :irtoy
+
   # not used right now. But they provide some clues on how the hexbug protocol is constructed.
   HEXBUG_SPIDER_LEAD =         [1800, 450]
   HEXBUG_SPIDER_CONTROL_CODE = [1800, 900]
@@ -19,7 +21,8 @@ class Hexbug
 
   # these are actually pairs of mark/space durations in µs
   #
-  #   lead     control   d0      d1        d2       d3       d4      d5       d6       d7        id0      id1        stop
+  # copied from https://raw.githubusercontent.com/xiam/arduino-hexbug-spider/master/lib/hexbug-spider/hexbug-spider.h
+  #     lead     control   d0      d1        d2       d3       d4      d5       d6       d7        id0      id1        stop
   # CMDS = <<-EOF
   #   (right
   #     1800 450 1800 900  350 550 350 550   350 1450 350 550  350 550 350 1450 350 1450 350 550   350 1450 350 1450   350)
@@ -33,6 +36,8 @@ class Hexbug
   #   (left
   #     1800 450 1800 900  350 1450 350 1450 350 550  350 550  350 550 350 550  350 550  350 1450  350 1450 350 1450   350)
   # EOF
+
+  # These were actually recorded from the remotes, and seem to work slightly better. Need to double-check that though.
   CMDS = <<-EOF
     (right
       1962 490 1962 959 383 575 383 575 383 1514 383 575 383 575 383 1535 383 1514 383 575 383 1514 383 1514 383)
@@ -51,20 +56,19 @@ class Hexbug
     irtoy.reset.sample_mode
   end
 
+  # cos reset in pry does a pry-reset
   alias fixit reset
 
-  def self.cmds
+  def self.cmd_pulses
     Hash[SXP.read_all(CMDS).map{|name,*rest| [name,rest]}]
   end
 
-  def cmds
-    @cmds ||= self.class.cmds
+  def cmd_pulses
+    @cmd_pulses ||= self.class.cmd_pulses
   end
 
-  alias durations cmds
-
   # generate the last space of the mark/space pairs. It's a long one.
-  def pause
+  def pause_cmd
     [pause_µs / IrToy::TICK_LENGTH].pack('n')
   end
 
@@ -74,18 +78,19 @@ class Hexbug
     90_000
   end
 
+  # This will yield a command string count times, because the hexbug
+  # is very timing sensitive and stops responding if the pause
+  # between commands is too long or too short.
   def cmd( name, count = 1 )
-    cmdst = durations[name]
-      .map{|m,s| [(m / IrToy::TICK_LENGTH), ((s / IrToy::TICK_LENGTH) rescue nil)].compact}
-      .flatten.map{|e| e.to_i}.pack('n*')
-
-    count.times{ yield cmdst + pause }
+    # convert durations to samples, and append pause
+    cmdst = cmd_pulses[name].map{|d| (d / IrToy::TICK_LENGTH).round}.pack('n*')
+    count.times{ yield cmdst }
   end
 
   def method_missing(meth, *args, &blk)
-    if durations.key? meth
+    if cmd_pulses.key? meth
       cmd meth, *args do |cmdst|
-        irtoy.transmit cmdst
+        irtoy.transmit cmdst + pause_cmd
         # 2x pause, seems to work well after various tries.
         sleep (pause_µs * 2) / 1e6
       end
