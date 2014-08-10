@@ -45,7 +45,7 @@ class IrToy < Serial
 
   # clear devicebuffer - ie read data until we get an empty read
   def clear
-    until (response = sp.read 1024).empty?
+    until (response = read).empty?
       yield response
     end
   end
@@ -85,14 +85,16 @@ class IrToy < Serial
   # mainly for debugging and pry-driving.
   def wr( stuff )
     write stuff
-    wait_read.read.to_hex
+    wait_readable.read.to_hex
   end
 
   # Must be in sample_mode first.
   # Not necessary to call sample_mode before each call to this though.
   # stuff is an ascii-8bit string of bytes to send.
   # Must be pairs of msb lsb
+  # FULLSTOP will be sent after stuff.
   def transmit( stuff )
+    stuff = stuff.dup
     original_length = stuff.length
 
     # handshaking, transmit notify (C|F), transmit byte count, transmit sub-mode
@@ -100,7 +102,7 @@ class IrToy < Serial
 
     while not stuff.empty?
       # reply here is how many bytes to send in next transmit
-      send_bytes = wait_read.read.unpack('C*').first
+      send_bytes = wait_readable.read.unpack('C*').first
       log "send_bytes: #{send_bytes.inspect}"
 
       if send_bytes
@@ -110,24 +112,25 @@ class IrToy < Serial
       else
         # dunno how many bytes to send, so just send it all
         next_slice = stuff
-        stuff = nil
+        stuff = ''
       end
 
       next_slice << FULLSTOP if stuff.empty?
       write next_slice
     end
 
-    last_handshake = wait_read.read(1)
+    # could possibly use parslet for this
+    last_handshake = wait_readable.read(1)
     log "expected last handshake. Got #{last_handshake.inspect}" unless last_handshake.length == 1
 
     # check transmission
-    t,bytes_received = wait_read.read.unpack('an')
+    t,bytes_received = wait_readable.read.unpack('an')
     log "not t: #{t.inspect}" unless t == 't'
     # + 6 for opening 4 bytes to set transmit mode, and the final 2 0xff
     # dunno, really. The bytes received number is all over the place.
     log "byte mismatch: #{original_length} != #{bytes_received}" unless original_length + 6 == bytes_received
 
-    c = wait_read.read
+    c = wait_readable.read
     # C is for complete, F is for underrun
     log "Not C: #{c.inspect}" unless c == 'C'
     self
@@ -145,10 +148,10 @@ class IrToy < Serial
     # so just get it out of the way.
     loop do
       write 's'
-      # MUST have blink here, otherwise wait_read waits forever
+      # MUST have blink here, otherwise wait_readable waits forever
       blink
-      # actually wait_read just seems to be in the way here.
-      # wait_read
+      # actually wait_readable just seems to be in the way here.
+      # wait_readable
       version_response = read
       log "version_response: #{version_response}"
       # raise "#{version_response} not S01" unless version_response == 'S01'
@@ -174,22 +177,23 @@ class IrToy < Serial
   end
 
   # block until there's data, then return self.
-  def wait_read(timeout=nil)
+  def wait_readable(timeout=nil)
     read?(timeout)
     self
   end
 
   def version
     write 'v'
-    wait_read.read
+    wait_readable.read
   end
 
   def settings
     write 0x23
-    rv = wait_read.read.unpack 'C4N'
+    rv = wait_readable.read.unpack 'C4N'
     # put it back in sample mode. Request for settings seems to end sample mode.
     sample_mode
-    rv
+    names = %i[pwm_pr2 duty_cycle pwm_prescaler transmit_prescaler clock_hz]
+    Hash[names.zip(rv)]
   end
 
   # for debugging
@@ -228,6 +232,7 @@ def irtoy( dev = DEFAULT_IRTOY_SERIAL_DEV )
   end
 end
 
+# a test command. I think it might be turn-right?
 __END__
 ---
 - !binary |-
