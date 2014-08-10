@@ -178,7 +178,7 @@ class Human < Parslet::Transform
     [350,  550] => 0,
     [350, 1450] => 1,
     [350, 0] => 'stop',
-    [350, 100000] => 'stop',
+    [350, 100_000] => 'stop',
   }
 
   rule :mark=>simple(:m), :space=>simple(:s) do |hash|
