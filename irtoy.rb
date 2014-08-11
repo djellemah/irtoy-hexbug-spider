@@ -200,13 +200,15 @@ class IrToy < Serial
 
   # for debugging
   # pry seems to break the DATA IO object. So just do it manually.
-  def rmsg
+  def self.rmsg
     @rmsg ||= begin
       contents = File.read __FILE__
       source, data = contents.split /^__END__\s*$/
       YAML.load(data).join
     end
   end
+
+  def rmsg; self.class.rmsg; end
 end
 
 DEFAULT_IRTOY_SERIAL_DEV =

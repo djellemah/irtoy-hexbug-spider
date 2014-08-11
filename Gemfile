@@ -1,6 +1,6 @@
 source 'http://rubygems.org'
 
-gem 'parslet'
+gem 'parslet', '> 1.6.0'
 gem 'rubyserial'
 gem 'fastandand'
 gem 'pry'
