@@ -39,7 +39,7 @@ $ rake pry
 
 [2] pry(#<Hexbug>):1> forward 3
 
-\# your spider should now take 3 'steps' forward
+\# your irtoy lights will flash (you'll only see one), and your spider should now take 3 'steps' forward.
 
 ## TODO
 
